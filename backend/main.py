@@ -6,7 +6,15 @@ sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from fastapi import FastAPI, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from backend.consultas import listar_tickets, obtener_ticket, listar_perfiles
+from pydantic import BaseModel
+
+from backend.consultas import (
+    listar_tickets,
+    obtener_ticket,
+    listar_perfiles,
+    listar_pendientes,
+    marcar_como_validado,
+)
 from agents.extraction.pipeline import procesar_ticket
 from agents.extraction.config import get_gemini_client, get_db_connection
 
@@ -22,6 +30,10 @@ app.add_middleware(
 client = get_gemini_client()
 conn = get_db_connection()
 cur = conn.cursor()
+
+
+class CorreccionTicket(BaseModel):
+    total_corregido: float | None = None
 
 
 @app.get("/")
@@ -46,6 +58,11 @@ def subir_ticket(archivo: UploadFile, perfil_id: int):
     return resultado
 
 
+@app.get("/tickets/pendientes")
+def get_pendientes(perfil_id: int):
+    return listar_pendientes(cur, perfil_id)
+
+
 @app.get("/tickets")
 def get_tickets(perfil_id: int, limite: int = 50):
     return listar_tickets(cur, perfil_id, limite)
@@ -57,3 +74,11 @@ def get_ticket(ticket_id: int, perfil_id: int):
     if ticket is None:
         raise HTTPException(status_code=404, detail="Ticket no encontrado")
     return ticket
+
+
+@app.patch("/tickets/{ticket_id}/validar")
+def validar_manualmente(ticket_id: int, perfil_id: int, correccion: CorreccionTicket):
+    ok = marcar_como_validado(cur, ticket_id, perfil_id, correccion.total_corregido)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Ticket no encontrado")
+    return {"mensaje": "Ticket validado"}

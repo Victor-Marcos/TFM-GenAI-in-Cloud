@@ -39,6 +39,32 @@ def obtener_ticket(cur, ticket_id, perfil_id):
     return ticket
 
 
+def listar_pendientes(cur, perfil_id):
+    cur.execute(
+        """SELECT t.id, t.fecha, t.total, t.motivo_revision, c.nombre AS comercio
+           FROM tickets t
+           JOIN comercios c ON t.comercio_id = c.id
+           WHERE t.perfil_id = %s AND t.estado = 'pendiente_revision'
+           ORDER BY t.id DESC""",
+        (perfil_id,)
+    )
+    columnas = ["id", "fecha", "total", "motivo_revision", "comercio"]
+    return [dict(zip(columnas, fila)) for fila in cur.fetchall()]
+
+
+def marcar_como_validado(cur, ticket_id, perfil_id, total_corregido=None):
+    if total_corregido is not None:
+        cur.execute(
+            "UPDATE tickets SET estado = 'validado', motivo_revision = NULL, total = %s WHERE id = %s AND perfil_id = %s",
+            (total_corregido, ticket_id, perfil_id)
+        )
+    else:
+        cur.execute(
+            "UPDATE tickets SET estado = 'validado', motivo_revision = NULL WHERE id = %s AND perfil_id = %s",
+            (ticket_id, perfil_id)
+        )
+    return cur.rowcount > 0
+
 def listar_perfiles(cur):
     cur.execute("SELECT id, nombre, avatar_color FROM perfiles ORDER BY id")
     columnas = ["id", "nombre", "avatar_color"]
