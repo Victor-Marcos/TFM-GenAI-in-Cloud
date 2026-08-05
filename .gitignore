@@ -6,3 +6,5 @@ node_modules/
 .DS_Store
 data/raw/
 *.ipynb_checkpoints/
+data/samples/
+data/tickets_guardados/
