@@ -6,11 +6,7 @@ from .prompt import cargar_valores_permitidos, construir_prompt
 from .imagen import preparar_imagen, guardar_imagen_permanente
 
 
-def guardar_ticket(cur, client, datos, ruta_imagen, tipos_permitidos, categorias_permitidas):
-    """
-    Persiste un ticket ya extraído en las 6 tablas del esquema:
-    valida, normaliza comercio y productos, y guarda cabecera + líneas.
-    """
+def guardar_ticket(cur, client, datos, ruta_imagen, tipos_permitidos, categorias_permitidas, perfil_id):
     errores = validar_ticket(datos, tipos_permitidos, categorias_permitidas)
     estado = "validado" if not errores else "pendiente_revision"
     motivo_revision = "; ".join(errores) if errores else None
@@ -26,9 +22,9 @@ def guardar_ticket(cur, client, datos, ruta_imagen, tipos_permitidos, categorias
     atributos = json.dumps({"desglose_iva": datos.get("desglose_iva", [])})
 
     cur.execute(
-        """INSERT INTO tickets (comercio_id, tipo_ticket_id, fecha, total, imagen_path, estado, motivo_revision, atributos, embedding)
-           VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id""",
-        (comercio_id, tipo_ticket_id, datos["fecha"], datos["total"], ruta_imagen, estado, motivo_revision, atributos, embedding_ticket)
+        """INSERT INTO tickets (comercio_id, tipo_ticket_id, fecha, total, imagen_path, estado, motivo_revision, atributos, embedding, perfil_id)
+           VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id""",
+        (comercio_id, tipo_ticket_id, datos["fecha"], datos["total"], ruta_imagen, estado, motivo_revision, atributos, embedding_ticket, perfil_id)
     )
     ticket_id = cur.fetchone()[0]
 
@@ -43,14 +39,7 @@ def guardar_ticket(cur, client, datos, ruta_imagen, tipos_permitidos, categorias
     return ticket_id, estado, motivo_revision
 
 
-def procesar_ticket(cur, client, fuente_imagen):
-    """
-    Función de entrada única del pipeline: recibe una imagen de ticket
-    (ruta de fichero o bytes en memoria) y devuelve el id, estado y
-    motivo de revisión tras ejecutar extracción, validación,
-    normalización y guardado completos. Esta es la función que debe
-    llamar el backend.
-    """
+def procesar_ticket(cur, client, fuente_imagen, perfil_id):
     tipos_permitidos, categorias_permitidas = cargar_valores_permitidos(cur)
     prompt = construir_prompt(tipos_permitidos, categorias_permitidas)
 
@@ -68,7 +57,7 @@ def procesar_ticket(cur, client, fuente_imagen):
         }
 
     ticket_id, estado, motivo_revision = guardar_ticket(
-        cur, client, datos, ruta_guardada, tipos_permitidos, categorias_permitidas
+        cur, client, datos, ruta_guardada, tipos_permitidos, categorias_permitidas, perfil_id
     )
 
     return {

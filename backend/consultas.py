@@ -1,25 +1,24 @@
-def listar_tickets(cur, limite=50):
-    """Devuelve los tickets más recientes, con datos del comercio."""
+def listar_tickets(cur, perfil_id, limite=50):
     cur.execute(
         """SELECT t.id, t.fecha, t.total, t.estado, c.nombre AS comercio
            FROM tickets t
            JOIN comercios c ON t.comercio_id = c.id
+           WHERE t.perfil_id = %s
            ORDER BY t.id DESC
            LIMIT %s""",
-        (limite,)
+        (perfil_id, limite)
     )
     columnas = ["id", "fecha", "total", "estado", "comercio"]
     return [dict(zip(columnas, fila)) for fila in cur.fetchall()]
 
 
-def obtener_ticket(cur, ticket_id):
-    """Devuelve el detalle completo de un ticket, con sus líneas de producto."""
+def obtener_ticket(cur, ticket_id, perfil_id):
     cur.execute(
         """SELECT t.id, t.fecha, t.total, t.estado, t.motivo_revision, t.atributos, c.nombre AS comercio
            FROM tickets t
            JOIN comercios c ON t.comercio_id = c.id
-           WHERE t.id = %s""",
-        (ticket_id,)
+           WHERE t.id = %s AND t.perfil_id = %s""",
+        (ticket_id, perfil_id)
     )
     fila = cur.fetchone()
     if not fila:
@@ -38,3 +37,9 @@ def obtener_ticket(cur, ticket_id):
     ticket["productos"] = [dict(zip(columnas_lineas, fila)) for fila in cur.fetchall()]
 
     return ticket
+
+
+def listar_perfiles(cur):
+    cur.execute("SELECT id, nombre, avatar_color FROM perfiles ORDER BY id")
+    columnas = ["id", "nombre", "avatar_color"]
+    return [dict(zip(columnas, fila)) for fila in cur.fetchall()]
