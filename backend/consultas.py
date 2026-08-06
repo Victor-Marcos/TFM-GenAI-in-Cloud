@@ -65,7 +65,18 @@ def marcar_como_validado(cur, ticket_id, perfil_id, total_corregido=None):
         )
     return cur.rowcount > 0
 
+
 def listar_perfiles(cur):
-    cur.execute("SELECT id, nombre, avatar_color FROM perfiles ORDER BY id")
-    columnas = ["id", "nombre", "avatar_color"]
+    cur.execute("SELECT id, nombre, descripcion, avatar_color FROM perfiles ORDER BY id")
+    columnas = ["id", "nombre", "descripcion", "avatar_color"]
     return [dict(zip(columnas, fila)) for fila in cur.fetchall()]
+
+
+def crear_perfil(cur, nombre, descripcion=None, avatar_color="#4A90D9"):
+    cur.execute(
+        """INSERT INTO perfiles (nombre, descripcion, avatar_color)
+           VALUES (%s, %s, %s) RETURNING id, nombre, descripcion, avatar_color""",
+        (nombre, descripcion, avatar_color)
+    )
+    fila = cur.fetchone()
+    return dict(zip(["id", "nombre", "descripcion", "avatar_color"], fila))

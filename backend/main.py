@@ -14,7 +14,9 @@ from backend.consultas import (
     listar_perfiles,
     listar_pendientes,
     marcar_como_validado,
+    crear_perfil,
 )
+
 from agents.extraction.pipeline import procesar_ticket
 from agents.extraction.config import get_gemini_client, get_db_connection
 
@@ -35,6 +37,9 @@ cur = conn.cursor()
 class CorreccionTicket(BaseModel):
     total_corregido: float | None = None
 
+class NuevoPerfil(BaseModel):
+    nombre: str
+    descripcion: str | None = None
 
 @app.get("/")
 def raiz():
@@ -45,6 +50,9 @@ def raiz():
 def get_perfiles():
     return listar_perfiles(cur)
 
+@app.post("/perfiles")
+def crear_perfil_endpoint(perfil: NuevoPerfil):
+    return crear_perfil(cur, perfil.nombre, perfil.descripcion)
 
 @app.post("/tickets")
 def subir_ticket(archivo: UploadFile, perfil_id: int):
