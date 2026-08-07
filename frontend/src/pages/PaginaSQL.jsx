@@ -1,4 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import * as XLSX from 'xlsx'
+import mermaid from 'mermaid'
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 
 const API_URL = 'http://localhost:8000'
@@ -21,15 +23,44 @@ GROUP BY mes
 ORDER BY mes`
 }
 
-const COLORES = ['#4A90D9', '#D9784A', '#4AD98F', '#D94A7A', '#A94AD9']
+const COLORES = ['#C1440E', '#3A6351', '#B08968', '#5B6660', '#8A9B68']
+
+function construirDiagrama(esquema) {
+  let texto = 'erDiagram\n'
+  for (const [tabla, columnas] of Object.entries(esquema.tablas)) {
+    texto += `  ${tabla} {\n`
+    columnas.forEach(c => { texto += `    ${c.tipo.replace(/\s/g, '_')} ${c.columna}\n` })
+    texto += `  }\n`
+  }
+  esquema.relaciones.forEach(r => {
+    texto += `  ${r.tabla_destino} ||--o{ ${r.tabla_origen} : "${r.columna_origen}"\n`
+  })
+  return texto
+}
 
 function PaginaSQL({ onVolver }) {
+  const [pestana, setPestana] = useState('consulta')
   const [sql, setSql] = useState(CONSULTAS_PREDEFINIDAS['Gasto por categoría'])
   const [resultado, setResultado] = useState(null)
   const [error, setError] = useState(null)
   const [columnaX, setColumnaX] = useState('')
   const [columnaY, setColumnaY] = useState('')
   const [tipoGrafico, setTipoGrafico] = useState('bar')
+  const [maximizado, setMaximizado] = useState(false)
+  const [svgEsquema, setSvgEsquema] = useState('')
+
+  useEffect(() => {
+    if (pestana === 'esquema' && !svgEsquema) {
+      fetch(`${API_URL}/esquema`)
+        .then(r => r.json())
+        .then(async esquema => {
+          mermaid.initialize({ startOnLoad: false, theme: 'neutral' })
+          const definicion = construirDiagrama(esquema)
+          const { svg } = await mermaid.render('diagrama-erd', definicion)
+          setSvgEsquema(svg)
+        })
+    }
+  }, [pestana])
 
   async function ejecutar() {
     setError(null)
@@ -50,21 +81,12 @@ function PaginaSQL({ onVolver }) {
     setColumnaY(datos.columnas[1] || '')
   }
 
-  function exportarCSV() {
+  function exportarExcel() {
     if (!resultado) return
-    const encabezado = resultado.columnas.join(',')
-    const filas = resultado.filas.map(fila =>
-      fila.map(valor => `"${String(valor).replace(/"/g, '""')}"`).join(',')
-    )
-    const contenidoCSV = [encabezado, ...filas].join('\n')
-
-    const blob = new Blob([contenidoCSV], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const enlace = document.createElement('a')
-    enlace.href = url
-    enlace.download = `consulta_${Date.now()}.csv`
-    enlace.click()
-    URL.revokeObjectURL(url)
+    const hoja = XLSX.utils.aoa_to_sheet([resultado.columnas, ...resultado.filas])
+    const libro = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(libro, hoja, 'Resultado')
+    XLSX.writeFile(libro, `consulta_${Date.now()}.xlsx`)
   }
 
   const datosGrafico = resultado
@@ -76,80 +98,162 @@ function PaginaSQL({ onVolver }) {
     : []
 
   return (
-    <div>
-      <button onClick={onVolver}>← Volver al menú</button>
-      <h1>Consola SQL (solo lectura)</h1>
+    <div className="contenedor-ancho">
+      <button onClick={onVolver} style={{ marginBottom: '20px' }}>← Volver al menú</button>
+      <h1 style={{ marginBottom: '16px' }}>Base de datos</h1>
 
-      <div>
-        {Object.keys(CONSULTAS_PREDEFINIDAS).map(nombre => (
-          <button key={nombre} onClick={() => setSql(CONSULTAS_PREDEFINIDAS[nombre])}>
-            {nombre}
-          </button>
-        ))}
+      <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', borderBottom: '2px solid var(--line)' }}>
+        <button
+          onClick={() => setPestana('consulta')}
+          style={{
+            border: 'none', borderRadius: '0', background: 'transparent',
+            borderBottom: pestana === 'consulta' ? '2px solid var(--ink)' : '2px solid transparent',
+            marginBottom: '-2px', fontWeight: pestana === 'consulta' ? 600 : 400
+          }}
+        >
+          Consulta SQL
+        </button>
+        <button
+          onClick={() => setPestana('esquema')}
+          style={{
+            border: 'none', borderRadius: '0', background: 'transparent',
+            borderBottom: pestana === 'esquema' ? '2px solid var(--ink)' : '2px solid transparent',
+            marginBottom: '-2px', fontWeight: pestana === 'esquema' ? 600 : 400
+          }}
+        >
+          Estructura de la BBDD
+        </button>
       </div>
 
-      <textarea rows={6} style={{ width: '100%', marginTop: '10px' }} value={sql} onChange={e => setSql(e.target.value)} />
-      <button onClick={ejecutar}>Ejecutar</button>
+      {pestana === 'esquema' && (
+        <div className="tarjeta-recibo" style={{ overflow: 'auto' }} dangerouslySetInnerHTML={{ __html: svgEsquema }} />
+      )}
 
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-
-      {resultado && (
+      {pestana === 'consulta' && (
         <>
-          <table border="1" style={{ marginTop: '20px' }}>
-            <thead>
-              <tr>{resultado.columnas.map(c => <th key={c}>{c}</th>)}</tr>
-            </thead>
-            <tbody>
-              {resultado.filas.map((fila, i) => (
-                <tr key={i}>{fila.map((valor, j) => <td key={j}>{String(valor)}</td>)}</tr>
-              ))}
-            </tbody>
-          </table>
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
+            {Object.keys(CONSULTAS_PREDEFINIDAS).map(nombre => (
+              <button key={nombre} onClick={() => setSql(CONSULTAS_PREDEFINIDAS[nombre])} style={{ fontSize: '13px' }}>
+                {nombre}
+              </button>
+            ))}
+          </div>
 
-          <button onClick={exportarCSV} style={{ marginTop: '10px' }}>Exportar a CSV</button>
+          <div
+            className="tarjeta-recibo"
+            style={maximizado
+              ? { position: 'fixed', inset: '24px', zIndex: 50, display: 'flex', flexDirection: 'column', margin: 0 }
+              : { display: 'flex', flexDirection: 'column' }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <span className="mono" style={{ fontSize: '12px', color: 'var(--ink-soft)', letterSpacing: '0.06em' }}>
+                SQL · SOLO LECTURA
+              </span>
+              <button onClick={() => setMaximizado(m => !m)} style={{ padding: '4px 10px', fontSize: '12px' }}>
+                {maximizado ? 'Minimizar' : 'Maximizar'}
+              </button>
+            </div>
+            <textarea
+              value={sql}
+              onChange={e => setSql(e.target.value)}
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: '14px',
+                lineHeight: 1.6,
+                width: '100%',
+                flex: maximizado ? 1 : 'none',
+                minHeight: maximizado ? undefined : '180px',
+                resize: maximizado ? 'none' : 'vertical'
+              }}
+            />
+            <div style={{ marginTop: '10px' }}>
+              <button onClick={ejecutar} style={{ background: 'var(--ink)', color: 'var(--paper)', border: 'none' }}>
+                Ejecutar
+              </button>
+            </div>
+          </div>
 
-          <h3>Graficar</h3>
-          <label>Tipo: </label>
-          <select value={tipoGrafico} onChange={e => setTipoGrafico(e.target.value)}>
-            <option value="bar">Barras</option>
-            <option value="line">Líneas</option>
-            <option value="pie">Tarta</option>
-          </select>
-          <label> Eje/Categoría: </label>
-          <select value={columnaX} onChange={e => setColumnaX(e.target.value)}>
-            {resultado.columnas.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-          <label> Valor: </label>
-          <select value={columnaY} onChange={e => setColumnaY(e.target.value)}>
-            {resultado.columnas.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
+          {maximizado && (
+            <div
+              onClick={() => setMaximizado(false)}
+              style={{ position: 'fixed', inset: 0, background: 'rgba(31,36,33,0.35)', zIndex: 40 }}
+            />
+          )}
 
-          <ResponsiveContainer width="100%" height={300}>
-            {tipoGrafico === 'bar' && (
-              <BarChart data={datosGrafico}>
-                <XAxis dataKey={columnaX} />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey={columnaY} fill="#4A90D9" />
-              </BarChart>
-            )}
-            {tipoGrafico === 'line' && (
-              <LineChart data={datosGrafico}>
-                <XAxis dataKey={columnaX} />
-                <YAxis />
-                <Tooltip />
-                <Line type="monotone" dataKey={columnaY} stroke="#4A90D9" />
-              </LineChart>
-            )}
-            {tipoGrafico === 'pie' && (
-              <PieChart>
-                <Pie data={datosGrafico} dataKey={columnaY} nameKey={columnaX} outerRadius={100} label>
-                  {datosGrafico.map((_, i) => <Cell key={i} fill={COLORES[i % COLORES.length]} />)}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            )}
-          </ResponsiveContainer>
+          {error && <p style={{ color: 'var(--stamp)', marginTop: '16px' }}>{error}</p>}
+
+          {resultado && !maximizado && (
+            <>
+              <div className="tarjeta-recibo" style={{ overflowX: 'auto', marginTop: '20px' }}>
+                <table className="mono" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                  <thead>
+                    <tr>{resultado.columnas.map(c => (
+                      <th key={c} style={{ textAlign: 'left', borderBottom: '2px solid var(--line)', padding: '6px 10px' }}>{c}</th>
+                    ))}</tr>
+                  </thead>
+                  <tbody>
+                    {resultado.filas.map((fila, i) => (
+                      <tr key={i}>{fila.map((valor, j) => (
+                        <td key={j} style={{ borderBottom: '1px solid var(--line)', padding: '6px 10px' }}>{String(valor)}</td>
+                      ))}</tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <button onClick={exportarExcel} style={{ marginTop: '12px' }}>Exportar a Excel</button>
+
+              <div className="tarjeta-recibo" style={{ marginTop: '20px' }}>
+                <h3 style={{ fontSize: '15px', marginBottom: '14px' }}>Graficar</h3>
+                <div style={{ display: 'flex', gap: '16px', marginBottom: '16px', flexWrap: 'wrap' }}>
+                  <label>Tipo:
+                    <select value={tipoGrafico} onChange={e => setTipoGrafico(e.target.value)} style={{ marginLeft: '6px' }}>
+                      <option value="bar">Barras</option>
+                      <option value="line">Líneas</option>
+                      <option value="pie">Tarta</option>
+                    </select>
+                  </label>
+                  <label>Eje/Categoría:
+                    <select value={columnaX} onChange={e => setColumnaX(e.target.value)} style={{ marginLeft: '6px' }}>
+                      {resultado.columnas.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </label>
+                  <label>Valor:
+                    <select value={columnaY} onChange={e => setColumnaY(e.target.value)} style={{ marginLeft: '6px' }}>
+                      {resultado.columnas.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </label>
+                </div>
+
+                <ResponsiveContainer width="100%" height={360}>
+                  {tipoGrafico === 'bar' && (
+                    <BarChart data={datosGrafico}>
+                      <XAxis dataKey={columnaX} stroke="var(--ink-soft)" />
+                      <YAxis stroke="var(--ink-soft)" />
+                      <Tooltip />
+                      <Bar dataKey={columnaY} fill="#C1440E" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  )}
+                  {tipoGrafico === 'line' && (
+                    <LineChart data={datosGrafico}>
+                      <XAxis dataKey={columnaX} stroke="var(--ink-soft)" />
+                      <YAxis stroke="var(--ink-soft)" />
+                      <Tooltip />
+                      <Line type="monotone" dataKey={columnaY} stroke="#3A6351" strokeWidth={2} />
+                    </LineChart>
+                  )}
+                  {tipoGrafico === 'pie' && (
+                    <PieChart>
+                      <Pie data={datosGrafico} dataKey={columnaY} nameKey={columnaX} outerRadius={120} label>
+                        {datosGrafico.map((_, i) => <Cell key={i} fill={COLORES[i % COLORES.length]} />)}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  )}
+                </ResponsiveContainer>
+              </div>
+            </>
+          )}
         </>
       )}
     </div>

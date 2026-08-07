@@ -105,3 +105,40 @@ def ejecutar_sql_seguro(cur, consulta_sql, limite_filas=500):
         "columnas": columnas,
         "filas": [list(fila) for fila in filas]
     }
+
+def eliminar_perfil(cur, perfil_id):
+    cur.execute("DELETE FROM tickets WHERE perfil_id = %s", (perfil_id,))
+    cur.execute("DELETE FROM perfiles WHERE id = %s", (perfil_id,))
+    return cur.rowcount > 0
+
+
+def obtener_esquema_bbdd(cur):
+    cur.execute("""
+        SELECT table_name, column_name, data_type
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+        ORDER BY table_name, ordinal_position
+    """)
+    tablas = {}
+    for tabla, columna, tipo in cur.fetchall():
+        tablas.setdefault(tabla, []).append({"columna": columna, "tipo": tipo})
+
+    cur.execute("""
+        SELECT
+            tc.table_name AS tabla_origen,
+            kcu.column_name AS columna_origen,
+            ccu.table_name AS tabla_destino,
+            ccu.column_name AS columna_destino
+        FROM information_schema.table_constraints tc
+        JOIN information_schema.key_column_usage kcu
+            ON tc.constraint_name = kcu.constraint_name
+        JOIN information_schema.constraint_column_usage ccu
+            ON tc.constraint_name = ccu.constraint_name
+        WHERE tc.constraint_type = 'FOREIGN KEY'
+    """)
+    relaciones = [
+        {"tabla_origen": fila[0], "columna_origen": fila[1], "tabla_destino": fila[2], "columna_destino": fila[3]}
+        for fila in cur.fetchall()
+    ]
+
+    return {"tablas": tablas, "relaciones": relaciones}

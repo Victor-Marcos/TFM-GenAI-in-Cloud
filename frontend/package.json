@@ -10,9 +10,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "mermaid": "^11.16.1",
+    "prismjs": "^1.30.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "recharts": "^3.10.1"
+    "react-simple-code-editor": "^0.14.1",
+    "recharts": "^3.10.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

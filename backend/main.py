@@ -16,6 +16,8 @@ from backend.consultas import (
     marcar_como_validado,
     crear_perfil,
     ejecutar_sql_seguro,
+    eliminar_perfil,
+    obtener_esquema_bbdd,
 )
 
 from agents.extraction.pipeline import procesar_ticket
@@ -87,6 +89,9 @@ def get_ticket(ticket_id: int, perfil_id: int):
         raise HTTPException(status_code=404, detail="Ticket no encontrado")
     return ticket
 
+@app.get("/esquema")
+def get_esquema():
+    return obtener_esquema_bbdd(cur)
 
 @app.patch("/tickets/{ticket_id}/validar")
 def validar_manualmente(ticket_id: int, perfil_id: int, correccion: CorreccionTicket):
@@ -102,3 +107,11 @@ def consulta_sql_endpoint(consulta: ConsultaSQL):
         return ejecutar_sql_seguro(cur, consulta.sql)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.delete("/perfiles/{perfil_id}")
+def eliminar_perfil_endpoint(perfil_id: int):
+    ok = eliminar_perfil(cur, perfil_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Perfil no encontrado")
+    return {"mensaje": "Perfil eliminado"}

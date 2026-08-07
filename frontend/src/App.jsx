@@ -31,7 +31,7 @@ function App() {
   if (pantalla === 'pendientes') {
     return <PaginaPendientes perfil={perfilActivo} onVolver={() => setPantalla('menu')} />
   }
-  
+
   if (pantalla === 'sql') {
   return <PaginaSQL onVolver={() => setPantalla('menu')} />
 }
