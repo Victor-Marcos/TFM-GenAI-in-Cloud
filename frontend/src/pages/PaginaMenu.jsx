@@ -7,6 +7,7 @@ function PaginaMenu({ perfil, onIrA, onCambiarPerfil }) {
         <button onClick={() => onIrA('pendientes')}>Revisar pendientes</button>
         <button onClick={() => onIrA('chat')}>Analizar con el agente</button>
         <button onClick={() => onIrA('dashboard')}>Ver dashboard</button>
+        <button onClick={() => onIrA('sql')}>Consola SQL</button>
       </div>
       <button onClick={onCambiarPerfil} style={{ marginTop: '20px' }}>Cambiar de perfil</button>
     </div>

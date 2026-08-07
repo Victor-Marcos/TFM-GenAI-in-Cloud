@@ -80,3 +80,28 @@ def crear_perfil(cur, nombre, descripcion=None, avatar_color="#4A90D9"):
     )
     fila = cur.fetchone()
     return dict(zip(["id", "nombre", "descripcion", "avatar_color"], fila))
+
+
+
+PALABRAS_PROHIBIDAS = ["insert", "update", "delete", "drop", "alter", "truncate", "grant", "create"]
+
+def ejecutar_sql_seguro(cur, consulta_sql, limite_filas=500):
+    consulta_limpia = consulta_sql.strip().lower()
+
+    if not consulta_limpia.startswith("select"):
+        raise ValueError("Solo se permiten consultas SELECT")
+
+    for palabra in PALABRAS_PROHIBIDAS:
+        if palabra in consulta_limpia:
+            raise ValueError(f"Consulta no permitida: contiene '{palabra}'")
+
+    if "limit" not in consulta_limpia:
+        consulta_sql = f"{consulta_sql.rstrip(';')} LIMIT {limite_filas}"
+
+    cur.execute(consulta_sql)
+    columnas = [desc[0] for desc in cur.description]
+    filas = cur.fetchall()
+    return {
+        "columnas": columnas,
+        "filas": [list(fila) for fila in filas]
+    }

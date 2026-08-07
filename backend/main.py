@@ -15,6 +15,7 @@ from backend.consultas import (
     listar_pendientes,
     marcar_como_validado,
     crear_perfil,
+    ejecutar_sql_seguro,
 )
 
 from agents.extraction.pipeline import procesar_ticket
@@ -40,6 +41,9 @@ class CorreccionTicket(BaseModel):
 class NuevoPerfil(BaseModel):
     nombre: str
     descripcion: str | None = None
+
+class ConsultaSQL(BaseModel):
+    sql: str
 
 @app.get("/")
 def raiz():
@@ -90,3 +94,11 @@ def validar_manualmente(ticket_id: int, perfil_id: int, correccion: CorreccionTi
     if not ok:
         raise HTTPException(status_code=404, detail="Ticket no encontrado")
     return {"mensaje": "Ticket validado"}
+
+
+@app.post("/consulta-sql")
+def consulta_sql_endpoint(consulta: ConsultaSQL):
+    try:
+        return ejecutar_sql_seguro(cur, consulta.sql)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
