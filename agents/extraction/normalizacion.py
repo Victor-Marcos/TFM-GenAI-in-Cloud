@@ -1,6 +1,9 @@
+from .reintentos import llamar_con_reintentos
+
 def get_embedding(client, texto, task_type="CLUSTERING"):
     from google.genai import types
-    result = client.models.embed_content(
+    result = llamar_con_reintentos(
+        client.models.embed_content,
         model="gemini-embedding-001",
         contents=texto,
         config=types.EmbedContentConfig(
@@ -77,12 +80,13 @@ Estos son productos ya existentes en el catálogo, de la misma categoría:
 ¿Alguno de ellos es EXACTAMENTE el mismo producto (aunque esté escrito de forma distinta)?
 Responde ÚNICAMENTE con el id numérico si hay coincidencia, o con "NINGUNO" si son productos distintos.
 """
-    response = client.models.generate_content(
-        model="gemini-3.1-flash-lite-preview",
-        contents=[prompt_verificacion],
-        config=types.GenerateContentConfig(
-            thinking_config=types.ThinkingConfig(thinking_level="minimal")
-        )
+    response = llamar_con_reintentos(
+            client.models.generate_content,
+            model="gemini-3.1-flash-lite-preview",
+            contents=[prompt_verificacion],
+            config=types.GenerateContentConfig(
+                thinking_config=types.ThinkingConfig(thinking_level="minimal")
+            )
     )
     resultado = response.text.strip()
 

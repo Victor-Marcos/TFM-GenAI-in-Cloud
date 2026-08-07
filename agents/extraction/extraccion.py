@@ -1,6 +1,7 @@
 import json
 from google.genai import types
 from .imagen import preparar_imagen
+from .reintentos import llamar_con_reintentos
 
 
 def parsear_json_robusto(texto):
@@ -18,7 +19,8 @@ def parsear_json_robusto(texto):
 
 
 def extraer_ticket_bytes(client, imagen_bytes, prompt):
-    response = client.models.generate_content(
+    response = llamar_con_reintentos(
+        client.models.generate_content,
         model="gemini-3-flash-preview",
         contents=[
             {"inline_data": {"mime_type": "image/jpeg", "data": imagen_bytes}},
