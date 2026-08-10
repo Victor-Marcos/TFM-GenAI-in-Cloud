@@ -193,3 +193,17 @@ def actualizar_ticket_completo(cur, ticket_id, perfil_id, fecha, total, comercio
         )
 
     return True
+
+def eliminar_ticket(cur, ticket_id, perfil_id):
+    cur.execute("SELECT imagen_path FROM tickets WHERE id = %s AND perfil_id = %s", (ticket_id, perfil_id))
+    fila = cur.fetchone()
+    if not fila:
+        return False
+
+    ruta_imagen = fila[0]
+    cur.execute("DELETE FROM tickets WHERE id = %s AND perfil_id = %s", (ticket_id, perfil_id))
+
+    if ruta_imagen and os.path.exists(ruta_imagen):
+        os.remove(ruta_imagen)
+
+    return cur.rowcount > 0

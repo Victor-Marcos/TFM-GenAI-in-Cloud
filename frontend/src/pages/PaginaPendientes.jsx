@@ -6,6 +6,7 @@ function PaginaPendientes({ perfil, onVolver }) {
   const [pendientes, setPendientes] = useState([])
   const [ticketEnEdicion, setTicketEnEdicion] = useState(null)
   const [imagenAmpliada, setImagenAmpliada] = useState(false)
+  const [rotacion, setRotacion] = useState(0)
 
   useEffect(() => { cargarLista() }, [])
 
@@ -67,6 +68,14 @@ function PaginaPendientes({ perfil, onVolver }) {
     cargarLista()
   }
 
+  async function eliminarTicket(ticketId) {
+  const confirmado = confirm('¿Seguro que quieres eliminar este ticket de forma permanente? No se puede deshacer.')
+  if (!confirmado) return
+
+  await fetch(`${API_URL}/tickets/${ticketId}?perfil_id=${perfil.id}`, { method: 'DELETE' })
+  cargarLista()
+}
+
   // ---- Vista de edición de un ticket ----
   if (ticketEnEdicion) {
     const diferencia = (parseFloat(ticketEnEdicion.total || 0) - sumaLineas()).toFixed(2)
@@ -83,25 +92,37 @@ function PaginaPendientes({ perfil, onVolver }) {
         <img
           src={`http://localhost:8000/tickets/${ticketEnEdicion.id}/imagen?perfil_id=${perfil.id}`}
           alt="Ticket original"
-          onClick={() => setImagenAmpliada(true)}
+          onClick={() => { setRotacion(0); setImagenAmpliada(true) }}
           style={{ maxWidth: '300px', borderRadius: 'var(--radius)', boxShadow: 'var(--shadow-card)', marginBottom: '20px', cursor: 'zoom-in' }}
         />
 
         {imagenAmpliada && (
-          <div
-            onClick={() => setImagenAmpliada(false)}
+        <div
+          onClick={() => setImagenAmpliada(false)}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(31,36,33,0.85)',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            zIndex: 100, gap: '16px'
+          }}
+        >
+          <img
+            src={`http://localhost:8000/tickets/${ticketEnEdicion.id}/imagen?perfil_id=${perfil.id}`}
+            alt="Ticket ampliado"
             style={{
-              position: 'fixed', inset: 0, background: 'rgba(31,36,33,0.85)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              zIndex: 100, cursor: 'zoom-out'
+              maxWidth: '85%', maxHeight: '75vh',
+              transform: `rotate(${rotacion}deg)`,
+              transition: 'transform 0.2s ease',
+              borderRadius: 'var(--radius)'
             }}
-          >
-            <img
-              src={`http://localhost:8000/tickets/${ticketEnEdicion.id}/imagen?perfil_id=${perfil.id}`}
-              alt="Ticket ampliado"
-              style={{ maxWidth: '90%', maxHeight: '90%', borderRadius: 'var(--radius)' }}
-            />
+          />
+          <div onClick={e => e.stopPropagation()} style={{ display: 'flex', gap: '10px' }}>
+            <button onClick={() => setRotacion(r => r - 90)}>↺ Girar izquierda</button>
+            <button onClick={() => setRotacion(r => r + 90)}>↻ Girar derecha</button>
+            <button onClick={() => setImagenAmpliada(false)} style={{ background: 'var(--stamp)', color: 'white', border: 'none' }}>
+              Cerrar
+            </button>
           </div>
+        </div>
         )}
 
         <div className="tarjeta-recibo">
@@ -211,11 +232,15 @@ function PaginaPendientes({ perfil, onVolver }) {
             {t.imagen_path?.split('/').pop()}
             </div>
           </div>
+
           <div style={{ display: 'flex', gap: '8px' }}>
-            <button onClick={() => validarSinCambios(t.id)} style={{ fontSize: '12px' }}>Validar sin cambios</button>
-            <button onClick={() => abrirEdicion(t.id)} style={{ background: 'var(--ink)', color: 'var(--paper)', border: 'none', fontSize: '12px' }}>
-              Revisar y corregir
-            </button>
+          <button onClick={() => validarSinCambios(t.id)} style={{ fontSize: '12px' }}>Validar sin cambios</button>
+          <button onClick={() => abrirEdicion(t.id)} style={{ background: 'var(--ink)', color: 'var(--paper)', border: 'none', fontSize: '12px' }}>
+            Revisar y corregir
+          </button>
+          <button onClick={() => eliminarTicket(t.id)} style={{ background: 'var(--stamp)', color: 'white', border: 'none', fontSize: '12px' }}>
+            Eliminar
+          </button>
           </div>
         </div>
       ))}
