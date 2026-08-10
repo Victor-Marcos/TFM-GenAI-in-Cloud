@@ -1,9 +1,11 @@
 import sys
 import os
 from io import BytesIO
+import os
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
+from fastapi.responses import FileResponse
 from fastapi import FastAPI, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -18,6 +20,7 @@ from backend.consultas import (
     ejecutar_sql_seguro,
     eliminar_perfil,
     obtener_esquema_bbdd,
+    actualizar_ticket_completo,
 )
 
 from agents.extraction.pipeline import procesar_ticket
@@ -37,6 +40,7 @@ conn = get_db_connection()
 cur = conn.cursor()
 
 
+
 class CorreccionTicket(BaseModel):
     total_corregido: float | None = None
 
@@ -46,6 +50,33 @@ class NuevoPerfil(BaseModel):
 
 class ConsultaSQL(BaseModel):
     sql: str
+
+class LineaEditada(BaseModel):
+    id: int
+    descripcion_original: str
+    cantidad: float
+    precio_unitario: float
+    subtotal: float
+
+
+class TicketCompleto(BaseModel):
+    fecha: str
+    total: float
+    comercio_nombre: str | None = None
+    lineas: list[LineaEditada]
+
+
+@app.patch("/tickets/{ticket_id}/completo")
+def actualizar_ticket_endpoint(ticket_id: int, perfil_id: int, datos: TicketCompleto):
+    ok = actualizar_ticket_completo(
+        cur, ticket_id, perfil_id,
+        datos.fecha, datos.total, datos.comercio_nombre,
+        [linea.dict() for linea in datos.lineas]
+    )
+    if not ok:
+        raise HTTPException(status_code=404, detail="Ticket no encontrado")
+    return {"mensaje": "Ticket actualizado y validado"}
+
 
 @app.get("/")
 def raiz():
@@ -115,3 +146,28 @@ def eliminar_perfil_endpoint(perfil_id: int):
     if not ok:
         raise HTTPException(status_code=404, detail="Perfil no encontrado")
     return {"mensaje": "Perfil eliminado"}
+
+
+@app.get("/tickets/{ticket_id}/imagen")
+def get_imagen_ticket(ticket_id: int, perfil_id: int):
+    ticket = obtener_ticket(cur, ticket_id, perfil_id)
+    if ticket is None:
+        raise HTTPException(status_code=404, detail="Ticket no encontrado")
+
+    ruta_imagen = ticket.get("imagen_path")
+    if not ruta_imagen or not os.path.exists(ruta_imagen):
+        raise HTTPException(status_code=404, detail="Imagen no encontrada")
+
+    return FileResponse(ruta_imagen)
+
+@app.get("/tickets/{ticket_id}/imagen")
+def get_imagen_ticket(ticket_id: int, perfil_id: int):
+    ticket = obtener_ticket(cur, ticket_id, perfil_id)
+    if ticket is None:
+        raise HTTPException(status_code=404, detail="Ticket no encontrado")
+
+    ruta_imagen = ticket.get("imagen_path")
+    if not ruta_imagen or not os.path.exists(ruta_imagen):
+        raise HTTPException(status_code=404, detail="Imagen no encontrada")
+
+    return FileResponse(ruta_imagen)

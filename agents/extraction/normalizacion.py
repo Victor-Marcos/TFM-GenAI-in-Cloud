@@ -42,12 +42,20 @@ def buscar_o_crear_comercio(cur, comercio_datos, tipo_ticket_nombre):
 
 
 def crear_producto_nuevo(cur, client, descripcion, categoria_id, embedding):
-    cur.execute(
-        """INSERT INTO productos (nombre_normalizado, categoria_id, embedding)
-           VALUES (%s, %s, %s) RETURNING id""",
-        (descripcion, categoria_id, embedding)
-    )
-    return cur.fetchone()[0]
+    try:
+        cur.execute(
+            """INSERT INTO productos (nombre_normalizado, categoria_id, embedding)
+               VALUES (%s, %s, %s) RETURNING id""",
+            (descripcion, categoria_id, embedding)
+        )
+        return cur.fetchone()[0]
+    except Exception as e:
+        if "productos_nombre_normalizado_key" in str(e):
+            cur.execute("SELECT id FROM productos WHERE nombre_normalizado = %s", (descripcion,))
+            fila = cur.fetchone()
+            if fila:
+                return fila[0]
+        raise
 
 
 def buscar_o_crear_producto(cur, client, descripcion, categoria_nombre, top_k=5):

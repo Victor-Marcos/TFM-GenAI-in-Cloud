@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import './App.css'
 import PaginaPerfiles from './pages/PaginaPerfiles.jsx'
 import PaginaMenu from './pages/PaginaMenu.jsx'
@@ -10,6 +10,12 @@ function App() {
   const [perfilActivo, setPerfilActivo] = useState(null)
   const [pantalla, setPantalla] = useState('menu')
 
+  const [ficheros, setFicheros] = useState([])
+  const [resultadosCarga, setResultadosCarga] = useState([])
+  const [procesando, setProcesando] = useState(false)
+  const [progreso, setProgreso] = useState({ actual: 0, total: 0 })
+  const cancelarRef = useRef(false)
+
   if (!perfilActivo) {
     return <PaginaPerfiles onSeleccionarPerfil={setPerfilActivo} />
   }
@@ -17,7 +23,6 @@ function App() {
   if (pantalla === 'menu') {
     return (
       <PaginaMenu
-        perfil={perfilActivo}
         onIrA={setPantalla}
         onCambiarPerfil={() => setPerfilActivo(null)}
       />
@@ -25,7 +30,21 @@ function App() {
   }
 
   if (pantalla === 'carga') {
-    return <PaginaCargaDatos perfil={perfilActivo} onVolver={() => setPantalla('menu')} />
+    return (
+      <PaginaCargaDatos
+        perfil={perfilActivo}
+        onVolver={() => setPantalla('menu')}
+        ficheros={ficheros}
+        setFicheros={setFicheros}
+        resultados={resultadosCarga}
+        setResultados={setResultadosCarga}
+        procesando={procesando}
+        setProcesando={setProcesando}
+        cancelarRef={cancelarRef}
+        progreso={progreso}
+        setProgreso={setProgreso}
+      />
+    )
   }
 
   if (pantalla === 'pendientes') {
@@ -33,8 +52,8 @@ function App() {
   }
 
   if (pantalla === 'sql') {
-  return <PaginaSQL onVolver={() => setPantalla('menu')} />
-}
+    return <PaginaSQL onVolver={() => setPantalla('menu')} />
+  }
 
   return <p>Pantalla "{pantalla}" todavía no construida</p>
 }

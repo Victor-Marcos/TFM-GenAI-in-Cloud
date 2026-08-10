@@ -47,6 +47,7 @@ function PaginaSQL({ onVolver }) {
   const [columnaY, setColumnaY] = useState('')
   const [tipoGrafico, setTipoGrafico] = useState('bar')
   const [maximizado, setMaximizado] = useState(false)
+  const [cargando, setCargando] = useState(false)
   const [svgEsquema, setSvgEsquema] = useState('')
 
   useEffect(() => {
@@ -63,7 +64,9 @@ function PaginaSQL({ onVolver }) {
   }, [pestana])
 
   async function ejecutar() {
-    setError(null)
+  setError(null)
+  setCargando(true)
+  try {
     const respuesta = await fetch(`${API_URL}/consulta-sql`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -79,7 +82,10 @@ function PaginaSQL({ onVolver }) {
     setResultado(datos)
     setColumnaX(datos.columnas[0] || '')
     setColumnaY(datos.columnas[1] || '')
+  } finally {
+    setCargando(false)
   }
+}
 
   function exportarExcel() {
     if (!resultado) return
@@ -167,8 +173,8 @@ function PaginaSQL({ onVolver }) {
               }}
             />
             <div style={{ marginTop: '10px' }}>
-              <button onClick={ejecutar} style={{ background: 'var(--ink)', color: 'var(--paper)', border: 'none' }}>
-                Ejecutar
+              <button onClick={ejecutar} disabled={cargando} style={{ background: 'var(--ink)', color: 'var(--paper)', border: 'none' }}>
+              {cargando ? 'Ejecutando...' : 'Ejecutar'}
               </button>
             </div>
           </div>
