@@ -53,6 +53,21 @@ def construir_herramientas(cur, perfil_id):
     ]
 
 
+def extraer_texto(respuesta):
+    """
+    El contenido de la respuesta puede venir como string simple o como
+    lista de bloques con metadatos. Esta funcion normaliza ambos casos
+    a un string limpio.
+    """
+    if isinstance(respuesta.content, str):
+        return respuesta.content
+    if isinstance(respuesta.content, list):
+        return "".join(
+            bloque.get("text", "") for bloque in respuesta.content if isinstance(bloque, dict)
+        )
+    return str(respuesta.content)
+
+
 def nodo_financiero(estado, cur):
     herramientas = construir_herramientas(cur, estado["perfil_id"])
     llm_con_tools = llm.bind_tools(herramientas)
@@ -69,7 +84,7 @@ def nodo_financiero(estado, cur):
     respuesta = llm_con_tools.invoke(mensajes)
 
     if not respuesta.tool_calls:
-        return {**estado, "respuesta_especialista": respuesta.content}
+        return {**estado, "respuesta_especialista": extraer_texto(respuesta)}
 
     mensajes.append(respuesta)
     mapa_herramientas = {h.name: h for h in herramientas}
@@ -80,4 +95,4 @@ def nodo_financiero(estado, cur):
         mensajes.append(ToolMessage(content=str(resultado), tool_call_id=llamada["id"]))
 
     respuesta_final = llm_con_tools.invoke(mensajes)
-    return {**estado, "respuesta_especialista": respuesta_final.content}
+    return {**estado, "respuesta_especialista": extraer_texto(respuesta_final)}
