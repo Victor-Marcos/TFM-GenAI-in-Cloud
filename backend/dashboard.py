@@ -292,3 +292,20 @@ def calidad_sistema(cur, perfil_id):
         "porcentaje_auto_validado": porcentaje_auto,
         "motivos_frecuentes": motivos_frecuentes,
     }
+
+
+def ultimo_ticket(cur, perfil_id):
+    cur.execute(
+        """SELECT t.fecha, t.total, c.nombre AS comercio
+           FROM tickets t
+           JOIN comercios c ON t.comercio_id = c.id
+           WHERE t.perfil_id = %s
+           ORDER BY t.fecha DESC, t.id DESC
+           LIMIT 1""",
+        (perfil_id,)
+    )
+    fila = cur.fetchone()
+    if not fila:
+        return {"mensaje": "No hay tickets registrados"}
+    fecha, total, comercio = fila
+    return {"fecha": fecha.isoformat(), "total": float(total), "comercio": comercio}

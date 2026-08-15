@@ -3,9 +3,9 @@ from langchain_core.tools import StructuredTool
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 
-from agents.extraction.reintentos import llamar_con_reintentos
 from backend.dashboard import calidad_sistema
 from backend.consultas import listar_pendientes
+from agents.extraction.reintentos import llamar_con_reintentos
 
 llm = ChatGoogleGenerativeAI(
     model="gemini-3-flash-preview",
@@ -28,6 +28,14 @@ def construir_herramientas(cur, perfil_id):
     ]
 
 
+def formatear_historial(historial, max_turnos=4):
+    if not historial:
+        return ""
+    ultimos = historial[-(max_turnos * 2):]
+    lineas = [f"{'Usuario' if m['autor'] == 'usuario' else 'Asistente'}: {m['texto']}" for m in ultimos]
+    return "\n\nConversación previa (para entender referencias como 'y el mes pasado'):\n" + "\n".join(lineas)
+
+
 def extraer_texto(respuesta):
     if isinstance(respuesta.content, str):
         return respuesta.content
@@ -36,13 +44,6 @@ def extraer_texto(respuesta):
             bloque.get("text", "") for bloque in respuesta.content if isinstance(bloque, dict)
         )
     return str(respuesta.content)
-
-def formatear_historial(historial, max_turnos=4):
-    if not historial:
-        return ""
-    ultimos = historial[-(max_turnos * 2):]
-    lineas = [f"{'Usuario' if m['autor'] == 'usuario' else 'Asistente'}: {m['texto']}" for m in ultimos]
-    return "\n\nConversación previa (para entender referencias como 'y el mes pasado'):\n" + "\n".join(lineas)
 
 
 def nodo_calidad(estado, cur):
@@ -55,7 +56,10 @@ def nodo_calidad(estado, cur):
         SystemMessage(content=(
             "Eres un asistente que informa sobre la fiabilidad del propio sistema "
             "de gestion de tickets del usuario. Usa SIEMPRE las herramientas "
-            "disponibles para responder con datos reales; nunca inventes cifras."
+            "disponibles para responder con datos reales; nunca inventes cifras. "
+            "Si la pregunta pide una opinión o valoración sobre la fiabilidad, "
+            "ofrécela basándote en los datos reales, dejando claro que es tu "
+            "interpretación, no un hecho objetivo."
             f"{contexto}"
         )),
         HumanMessage(content=estado["pregunta"]),

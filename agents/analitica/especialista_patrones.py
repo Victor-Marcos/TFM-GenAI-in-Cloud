@@ -3,8 +3,8 @@ from langchain_core.tools import StructuredTool
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 
-from agents.extraction.reintentos import llamar_con_reintentos
 from backend.dashboard import productos_completo, productos_comprados_juntos
+from agents.extraction.reintentos import llamar_con_reintentos
 
 llm = ChatGoogleGenerativeAI(
     model="gemini-3-flash-preview",
@@ -27,12 +27,15 @@ def construir_herramientas(cur, perfil_id):
     ]
 
 
+def formatear_historial(historial, max_turnos=4):
+    if not historial:
+        return ""
+    ultimos = historial[-(max_turnos * 2):]
+    lineas = [f"{'Usuario' if m['autor'] == 'usuario' else 'Asistente'}: {m['texto']}" for m in ultimos]
+    return "\n\nConversación previa (para entender referencias como 'y el mes pasado'):\n" + "\n".join(lineas)
+
+
 def extraer_texto(respuesta):
-    """
-    El contenido de la respuesta puede venir como string simple o como
-    lista de bloques con metadatos. Esta funcion normaliza ambos casos
-    a un string limpio.
-    """
     if isinstance(respuesta.content, str):
         return respuesta.content
     if isinstance(respuesta.content, list):
@@ -41,12 +44,6 @@ def extraer_texto(respuesta):
         )
     return str(respuesta.content)
 
-def formatear_historial(historial, max_turnos=4):
-    if not historial:
-        return ""
-    ultimos = historial[-(max_turnos * 2):]
-    lineas = [f"{'Usuario' if m['autor'] == 'usuario' else 'Asistente'}: {m['texto']}" for m in ultimos]
-    return "\n\nConversación previa (para entender referencias como 'y el mes pasado'):\n" + "\n".join(lineas)
 
 def nodo_patrones(estado, cur):
     herramientas = construir_herramientas(cur, estado["perfil_id"])
@@ -58,7 +55,11 @@ def nodo_patrones(estado, cur):
         SystemMessage(content=(
             "Eres un asistente especializado en habitos de compra. Usa SIEMPRE "
             "las herramientas disponibles para responder con datos reales; nunca "
-            "inventes cifras ni nombres de productos."
+            "inventes cifras ni nombres de productos. "
+            "Si la pregunta pide una opinión, valoración o recomendación (por ejemplo "
+            "'¿debería comprar menos de X?'), ofrécela basándote en los datos reales "
+            "que obtengas, dejando claro que es una sugerencia o interpretación tuya, "
+            "no un hecho objetivo."
             f"{contexto}"
         )),
         HumanMessage(content=estado["pregunta"]),

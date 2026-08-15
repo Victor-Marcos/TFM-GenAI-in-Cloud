@@ -3,7 +3,6 @@ from langchain_core.tools import StructuredTool
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 
-from agents.extraction.reintentos import llamar_con_reintentos
 from backend.dashboard import (
     resumen_general,
     gasto_por_categoria,
@@ -11,7 +10,9 @@ from backend.dashboard import (
     evolucion_completa,
     gasto_por_tipo_ticket,
     ticket_medio_por_categoria,
+    ultimo_ticket,
 )
+from agents.extraction.reintentos import llamar_con_reintentos
 
 llm = ChatGoogleGenerativeAI(
     model="gemini-3-flash-preview",
@@ -51,22 +52,12 @@ def construir_herramientas(cur, perfil_id):
             name="ticket_medio_por_categoria",
             description="El importe medio que sueles gastar por compra en cada categoria. Usar para '¿cuanto suelo gastar cada vez que compro carne?'",
         ),
+        StructuredTool.from_function(
+            func=lambda: ultimo_ticket(cur, perfil_id),
+            name="ultimo_ticket",
+            description="El ticket mas reciente registrado: fecha, comercio y total. Usar para '¿cual fue mi ultima compra?'",
+        ),
     ]
-
-
-def extraer_texto(respuesta):
-    """
-    El contenido de la respuesta puede venir como string simple o como
-    lista de bloques con metadatos. Esta funcion normaliza ambos casos
-    a un string limpio.
-    """
-    if isinstance(respuesta.content, str):
-        return respuesta.content
-    if isinstance(respuesta.content, list):
-        return "".join(
-            bloque.get("text", "") for bloque in respuesta.content if isinstance(bloque, dict)
-        )
-    return str(respuesta.content)
 
 
 def formatear_historial(historial, max_turnos=4):
@@ -75,6 +66,17 @@ def formatear_historial(historial, max_turnos=4):
     ultimos = historial[-(max_turnos * 2):]
     lineas = [f"{'Usuario' if m['autor'] == 'usuario' else 'Asistente'}: {m['texto']}" for m in ultimos]
     return "\n\nConversación previa (para entender referencias como 'y el mes pasado'):\n" + "\n".join(lineas)
+
+
+def extraer_texto(respuesta):
+    if isinstance(respuesta.content, str):
+        return respuesta.content
+    if isinstance(respuesta.content, list):
+        return "".join(
+            bloque.get("text", "") for bloque in respuesta.content if isinstance(bloque, dict)
+        )
+    return str(respuesta.content)
+
 
 def nodo_financiero(estado, cur):
     herramientas = construir_herramientas(cur, estado["perfil_id"])
@@ -86,7 +88,11 @@ def nodo_financiero(estado, cur):
         SystemMessage(content=(
             "Eres un asistente financiero personal. Usa SIEMPRE las herramientas "
             "disponibles para responder con datos reales; nunca inventes cifras. "
-            "Si una pregunta necesita varias herramientas, llama a todas las que hagan falta."
+            "Si una pregunta necesita varias herramientas, llama a todas las que hagan falta. "
+            "Si la pregunta pide una opinión, valoración o recomendación (por ejemplo "
+            "'¿gasto demasiado en X?' o '¿en qué podría ahorrar?'), ofrécela basándote "
+            "en los datos reales que obtengas, dejando claro que es una sugerencia o "
+            "interpretación tuya, no un hecho objetivo."
             f"{contexto}"
         )),
         HumanMessage(content=estado["pregunta"]),
