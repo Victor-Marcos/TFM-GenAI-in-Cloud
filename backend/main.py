@@ -1,7 +1,6 @@
 import sys
 import os
 from io import BytesIO
-import os
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
@@ -9,6 +8,7 @@ from fastapi.responses import FileResponse
 from fastapi import FastAPI, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from agents.analitica.grafo import construir_grafo
 
 from backend.consultas import (
     listar_tickets,
@@ -49,7 +49,7 @@ app.add_middleware(
 client = get_gemini_client()
 conn = get_db_connection()
 cur = conn.cursor()
-
+grafo_agente = construir_grafo(cur)
 
 
 class CorreccionTicket(BaseModel):
@@ -171,18 +171,6 @@ def get_imagen_ticket(ticket_id: int, perfil_id: int):
 
     return FileResponse(ruta_imagen)
 
-@app.get("/tickets/{ticket_id}/imagen")
-def get_imagen_ticket(ticket_id: int, perfil_id: int):
-    ticket = obtener_ticket(cur, ticket_id, perfil_id)
-    if ticket is None:
-        raise HTTPException(status_code=404, detail="Ticket no encontrado")
-
-    ruta_imagen = ticket.get("imagen_path")
-    if not ruta_imagen or not os.path.exists(ruta_imagen):
-        raise HTTPException(status_code=404, detail="Imagen no encontrada")
-
-    return FileResponse(ruta_imagen)
-
 
 @app.delete("/tickets/{ticket_id}")
 def eliminar_ticket_endpoint(ticket_id: int, perfil_id: int):
@@ -227,3 +215,26 @@ def get_dashboard_tipos(perfil_id: int):
 @app.get("/dashboard/calidad")
 def get_dashboard_calidad(perfil_id: int):
     return calidad_sistema(cur, perfil_id)
+
+
+class MensajeHistorial(BaseModel):
+    autor: str
+    texto: str
+
+class PreguntaChat(BaseModel):
+    pregunta: str
+    historial: list[MensajeHistorial] = []
+
+@app.post("/chat")
+def chat_endpoint(perfil_id: int, datos: PreguntaChat):
+    historial_dict = [{"autor": m.autor, "texto": m.texto} for m in datos.historial]
+    resultado = grafo_agente.invoke({
+        "pregunta": datos.pregunta,
+        "historial": historial_dict,
+        "perfil_id": perfil_id,
+        "intentos": 0,
+    })
+    return {
+        "respuesta": resultado["respuesta_final"],
+        "especialista_usado": resultado.get("especialista_elegido"),
+    }

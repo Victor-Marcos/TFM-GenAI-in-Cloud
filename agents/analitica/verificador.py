@@ -3,6 +3,7 @@ import json
 from dotenv import load_dotenv
 load_dotenv()
 
+from agents.extraction.reintentos import llamar_con_reintentos
 from google import genai
 from google.genai import types
 
@@ -32,7 +33,8 @@ Responde ÚNICAMENTE con un JSON:
 {{"suficiente": true/false, "motivo": "explicacion breve solo si suficiente es false, si no cadena vacia"}}
 """
 
-    response = client.models.generate_content(
+    response = llamar_con_reintentos(
+        client.models.generate_content,
         model="gemini-3.1-flash-lite-preview",
         contents=[prompt],
         config=types.GenerateContentConfig(

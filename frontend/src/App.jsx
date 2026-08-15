@@ -6,6 +6,7 @@ import PaginaCargaDatos from './pages/PaginaCargaDatos.jsx'
 import PaginaPendientes from './pages/PaginaPendientes.jsx'
 import PaginaSQL from './pages/PaginaSQL.jsx'
 import PaginaDashboard from './pages/PaginaDashboard.jsx'
+import PaginaChat from './pages/PaginaChat.jsx'
 
 function App() {
   const [perfilActivo, setPerfilActivo] = useState(null)
@@ -56,8 +57,13 @@ function App() {
     return <PaginaSQL onVolver={() => setPantalla('menu')} />
   }
   if (pantalla === 'dashboard') {
-  return <PaginaDashboard perfil={perfilActivo} onVolver={() => setPantalla('menu')} />
-}
+    return <PaginaDashboard perfil={perfilActivo} onVolver={() => setPantalla('menu')} />
+  }
+
+  if (pantalla === 'chat') {
+    return <PaginaChat perfil={perfilActivo} onVolver={() => setPantalla('menu')} />
+  }
+
   return <p>Pantalla "{pantalla}" todavía no construida</p>
 }
 

@@ -2,6 +2,7 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
+from agents.extraction.reintentos import llamar_con_reintentos
 from google import genai
 from google.genai import types
 
@@ -36,7 +37,8 @@ nada adicional. No menciones que eres un "especialista" ni el proceso interno.
 {aviso}
 """
 
-    response = client.models.generate_content(
+    response = llamar_con_reintentos(
+        client.models.generate_content,
         model="gemini-3-flash-preview",
         contents=[prompt],
         config=types.GenerateContentConfig(

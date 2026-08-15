@@ -3,6 +3,7 @@ from langchain_core.tools import StructuredTool
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 
+from agents.extraction.reintentos import llamar_con_reintentos
 from backend.dashboard import calidad_sistema
 from backend.consultas import listar_pendientes
 
@@ -36,21 +37,31 @@ def extraer_texto(respuesta):
         )
     return str(respuesta.content)
 
+def formatear_historial(historial, max_turnos=4):
+    if not historial:
+        return ""
+    ultimos = historial[-(max_turnos * 2):]
+    lineas = [f"{'Usuario' if m['autor'] == 'usuario' else 'Asistente'}: {m['texto']}" for m in ultimos]
+    return "\n\nConversación previa (para entender referencias como 'y el mes pasado'):\n" + "\n".join(lineas)
+
 
 def nodo_calidad(estado, cur):
     herramientas = construir_herramientas(cur, estado["perfil_id"])
     llm_con_tools = llm.bind_tools(herramientas)
+
+    contexto = formatear_historial(estado.get("historial", []))
 
     mensajes = [
         SystemMessage(content=(
             "Eres un asistente que informa sobre la fiabilidad del propio sistema "
             "de gestion de tickets del usuario. Usa SIEMPRE las herramientas "
             "disponibles para responder con datos reales; nunca inventes cifras."
+            f"{contexto}"
         )),
         HumanMessage(content=estado["pregunta"]),
     ]
 
-    respuesta = llm_con_tools.invoke(mensajes)
+    respuesta = llamar_con_reintentos(llm_con_tools.invoke, mensajes)
 
     if not respuesta.tool_calls:
         return {**estado, "respuesta_especialista": extraer_texto(respuesta)}
@@ -59,9 +70,14 @@ def nodo_calidad(estado, cur):
     mapa_herramientas = {h.name: h for h in herramientas}
 
     for llamada in respuesta.tool_calls:
-        herramienta = mapa_herramientas[llamada["name"]]
-        resultado = herramienta.invoke(llamada["args"])
+        try:
+            herramienta = mapa_herramientas[llamada["name"]]
+            resultado = herramienta.invoke(llamada["args"])
+        except KeyError:
+            resultado = f"Error: la herramienta '{llamada['name']}' no existe. Las herramientas disponibles son: {list(mapa_herramientas.keys())}"
+        except Exception as e:
+            resultado = f"Error al ejecutar la herramienta: {e}"
         mensajes.append(ToolMessage(content=str(resultado), tool_call_id=llamada["id"]))
 
-    respuesta_final = llm_con_tools.invoke(mensajes)
+    respuesta_final = llamar_con_reintentos(llm_con_tools.invoke, mensajes)
     return {**estado, "respuesta_especialista": extraer_texto(respuesta_final)}

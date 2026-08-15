@@ -5,16 +5,25 @@ load_dotenv()
 
 from google import genai
 from google.genai import types
+from agents.extraction.reintentos import llamar_con_reintentos
 
 client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
 
 DESCRIPCIONES_ESPECIALISTAS = {
-    "financiero": "Cuanto/donde/cuando se ha gastado: totales, gasto por categoria, por comercio, evolucion en el tiempo, comparativas de meses.",
+    "financiero": "Cuanto/donde/cuando se ha gastado: totales, gasto por categoria, por comercio, evolucion en el tiempo, comparativas de meses, informacion sobre el ultimo ticket o la ultima compra.",
     "patrones": "Que productos se compran, con que frecuencia, que productos se compran juntos, ranking de productos por gasto o por veces comprados.",
     "calidad": "Preguntas sobre el propio sistema: cuantos tickets pendientes de revision manual, porcentaje de auto-validacion, fiabilidad del pipeline de extraccion.",
     "sql_libre": "Cualquier pregunta sobre LOS DATOS DEL USUARIO que no encaje claramente en las anteriores; permite escribir una consulta SQL a medida.",
     "fuera_de_alcance": "La pregunta NO tiene relacion con los tickets, gastos o compras del usuario (charla general, temas ajenos, saludos, preguntas sobre ti mismo como asistente).",
 }
+
+
+def formatear_historial(historial, max_turnos=4):
+    if not historial:
+        return ""
+    ultimos = historial[-(max_turnos * 2):]
+    lineas = [f"{'Usuario' if m['autor'] == 'usuario' else 'Asistente'}: {m['texto']}" for m in ultimos]
+    return "\nConversación previa:\n" + "\n".join(lineas) + "\n"
 
 
 def nodo_orquestador(estado):
@@ -35,19 +44,22 @@ el mismo (si el problema fue de ejecución, no de elección) u otro distinto
         f"- {nombre}: {descripcion}" for nombre, descripcion in DESCRIPCIONES_ESPECIALISTAS.items()
     )
 
+    contexto_historial = formatear_historial(estado.get("historial", []))
+
     prompt = f"""
 Clasifica esta pregunta de un usuario sobre sus gastos personales, eligiendo
 EXACTAMENTE uno de estos especialistas:
 
 {lista_especialistas}
-
+{contexto_historial}
 Pregunta: "{estado['pregunta']}"
 {contexto_reintento}
 
 Responde ÚNICAMENTE con un JSON: {{"especialista": "uno_de_los_anteriores"}}
 """
 
-    response = client.models.generate_content(
+    response = llamar_con_reintentos(
+        client.models.generate_content,
         model="gemini-3.1-flash-lite-preview",
         contents=[prompt],
         config=types.GenerateContentConfig(
