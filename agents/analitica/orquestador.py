@@ -12,7 +12,8 @@ DESCRIPCIONES_ESPECIALISTAS = {
     "financiero": "Cuanto/donde/cuando se ha gastado: totales, gasto por categoria, por comercio, evolucion en el tiempo, comparativas de meses.",
     "patrones": "Que productos se compran, con que frecuencia, que productos se compran juntos, ranking de productos por gasto o por veces comprados.",
     "calidad": "Preguntas sobre el propio sistema: cuantos tickets pendientes de revision manual, porcentaje de auto-validacion, fiabilidad del pipeline de extraccion.",
-    "sql_libre": "Cualquier pregunta sobre los datos que no encaje claramente en las anteriores; permite escribir una consulta SQL a medida.",
+    "sql_libre": "Cualquier pregunta sobre LOS DATOS DEL USUARIO que no encaje claramente en las anteriores; permite escribir una consulta SQL a medida.",
+    "fuera_de_alcance": "La pregunta NO tiene relacion con los tickets, gastos o compras del usuario (charla general, temas ajenos, saludos, preguntas sobre ti mismo como asistente).",
 }
 
 
