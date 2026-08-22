@@ -18,16 +18,33 @@ def nodo_verificador(estado):
     pregunta original. Si no, escribe motivo_fallo para que el
     Orquestador pueda reintentar con mejor informacion.
     """
+    datos = estado.get("datos_obtenidos")
+    resumen_datos = datos if datos else "NINGUNO — no se llamó a ninguna herramienta"
+
     prompt = f"""
 Pregunta original del usuario: "{estado['pregunta']}"
+
+Datos reales obtenidos de la base de datos por el especialista:
+{resumen_datos}
 
 Respuesta que ha dado el especialista "{estado['especialista_elegido']}":
 "{estado['respuesta_especialista']}"
 
-¿Esta respuesta responde de verdad la pregunta, con datos concretos (no
-vagos ni genéricos)? Considera que falla si: falta un dato pedido
-explícitamente, la respuesta dice que no tiene información pudiendo
-tenerla, o el especialista no era el adecuado para esta pregunta.
+¿Esta respuesta responde de verdad la pregunta? Ten en cuenta:
+- Si "Datos reales obtenidos" es NINGUNO, la respuesta casi seguro es
+  insuficiente: significa que no se consultó ninguna fuente de datos real,
+  sea cual sea el tono de la respuesta.
+- Si la pregunta pide una opinión o recomendación, un tono cercano o
+  frases como "normalmente" o "podrías considerar" son perfectamente
+  válidas, SIEMPRE que la respuesta se apoye en los datos reales
+  mostrados arriba, no en conocimiento general sin ninguna cifra del
+  usuario detrás.
+- Para preguntas de opinión, dieta o recomendación, es SUFICIENTE si la
+  respuesta menciona productos o categorías reales obtenidos de las
+  herramientas (visibles en "Datos reales obtenidos"), aunque no incluya
+  cifras numéricas — no exijas números para este tipo de preguntas.
+- Falla también si falta un dato pedido explícitamente, o si el
+  especialista elegido no era el adecuado para esta pregunta.
 
 Responde ÚNICAMENTE con un JSON:
 {{"suficiente": true/false, "motivo": "explicacion breve solo si suficiente es false, si no cadena vacia"}}

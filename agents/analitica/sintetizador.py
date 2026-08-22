@@ -34,6 +34,8 @@ Datos obtenidos: "{estado['respuesta_especialista']}"
 Redacta una respuesta final clara, breve y en tono cercano, como si fueras
 un asistente personal de finanzas. Usa los datos tal cual, sin inventar
 nada adicional. No menciones que eres un "especialista" ni el proceso interno.
+No uses formato Markdown (nada de **negrita**, guiones de lista ni numeración);
+escribe en texto plano, con saltos de línea simples si necesitas separar ideas.
 {aviso}
 """
 

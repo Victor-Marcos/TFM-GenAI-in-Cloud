@@ -72,7 +72,9 @@ def nodo_sql_libre(estado, cur):
             "falla, intenta corregirla basandote en el mensaje de error. "
             "Si la pregunta pide una opinión o recomendación, ofrécela basándote en "
             "los datos reales que obtengas, dejando claro que es tu interpretación, "
-            "no un hecho objetivo."
+            "no un hecho objetivo. "
+            "No uses formato Markdown (nada de **negrita**, guiones de lista ni numeración); "
+            "escribe en texto plano, con saltos de línea simples si necesitas separar ideas."
             f"{contexto}"
         )),
         HumanMessage(content=estado["pregunta"]),
@@ -81,7 +83,7 @@ def nodo_sql_libre(estado, cur):
     respuesta = llamar_con_reintentos(llm_con_tools.invoke, mensajes)
 
     if not respuesta.tool_calls:
-        return {**estado, "respuesta_especialista": extraer_texto(respuesta)}
+        return {**estado, "respuesta_especialista": extraer_texto(respuesta), "datos_obtenidos": None}
 
     mensajes.append(respuesta)
     mapa_herramientas = {h.name: h for h in herramientas}
@@ -97,4 +99,11 @@ def nodo_sql_libre(estado, cur):
         mensajes.append(ToolMessage(content=str(resultado), tool_call_id=llamada["id"]))
 
     respuesta_final = llamar_con_reintentos(llm_con_tools.invoke, mensajes)
-    return {**estado, "respuesta_especialista": extraer_texto(respuesta_final)}
+
+    datos_obtenidos = "\n".join(m.content for m in mensajes if isinstance(m, ToolMessage))
+
+    return {
+        **estado,
+        "respuesta_especialista": extraer_texto(respuesta_final),
+        "datos_obtenidos": datos_obtenidos,
+    }
