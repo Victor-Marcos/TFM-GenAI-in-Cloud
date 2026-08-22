@@ -107,6 +107,9 @@ def nodo_patrones(estado, cur):
 
     datos_obtenidos = "\n".join(m.content for m in mensajes if isinstance(m, ToolMessage))
 
+    print(f"[PATRONES] pregunta: {estado['pregunta']}")
+    print(f"[PATRONES] datos_obtenidos: {datos_obtenidos[:800]}")
+
     return {
         **estado,
         "respuesta_especialista": extraer_texto(respuesta_final),

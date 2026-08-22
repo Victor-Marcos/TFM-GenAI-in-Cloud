@@ -16,6 +16,21 @@ llm = ChatGoogleGenerativeAI(
     google_api_key=os.getenv("GOOGLE_API_KEY"),
 )
 
+ESQUEMA_BBDD = """
+Columnas exactas disponibles:
+- tickets(id, comercio_id, tipo_ticket_id, perfil_id, fecha, total, estado, atributos)
+- lineas_ticket(id, ticket_id, producto_id, descripcion_original, cantidad, precio_unitario, subtotal)
+- productos(id, nombre_normalizado, categoria_id)
+- categorias_producto(id, nombre)
+- comercios(id, nombre, cadena, direccion, nif)
+
+IMPORTANTE sobre fechas: la columna 'fecha' es de tipo DATE, no texto.
+Para filtrar por mes usa EXTRACT(MONTH FROM fecha) = N, nunca LIKE.
+Si el usuario no especifica un año concreto, NO asumas un año: incluye
+TODOS los años disponibles para ese mes, usando solo EXTRACT(MONTH FROM
+fecha) = N sin restringir el año.
+"""
+
 
 def construir_herramientas(cur, perfil_id):
     def consulta_respaldo(sql: str):
@@ -64,9 +79,10 @@ def construir_herramientas(cur, perfil_id):
             name="consulta_sql_respaldo",
             description=(
                 "USAR SOLO si ninguna otra herramienta responde exactamente lo que se "
-                "pregunta. Ejecuta un SELECT a medida sobre tickets, lineas_ticket, "
-                "productos, comercios, categorias_producto, tipos_ticket. "
-                f"DEBE incluir WHERE ... perfil_id = {perfil_id} si toca la tabla tickets."
+                "pregunta. Ejecuta un SELECT a medida. " + ESQUEMA_BBDD +
+                f"DEBE incluir WHERE ... perfil_id = {perfil_id} si toca la tabla tickets. "
+                "USA EXACTAMENTE los nombres de columna de arriba, nunca inventes nombres "
+                "distintos como 'importe_linea' (la columna correcta es 'subtotal')."
             ),
         ),
     ]
@@ -109,7 +125,16 @@ def nodo_financiero(estado, cur):
             "bien decir 'normalmente' o 'podrías considerar' si te apoyas en datos reales); "
             "deja claro que es una interpretación, no un hecho. "
             "No uses formato Markdown (nada de **negrita**, guiones de lista ni numeración); "
-            "escribe en texto plano, con saltos de línea simples si necesitas separar ideas."
+            "escribe en texto plano, con saltos de línea simples si necesitas separar ideas. "
+            "Si una pregunta menciona un periodo de tiempo sin año (como 'julio' o "
+            "'el mes pasado'), y tus datos incluyen varios años distintos para ese "
+            "periodo, acláralo en tu respuesta: indica explícitamente qué años estás "
+            "incluyendo en el cálculo, para que el usuario sepa exactamente a qué "
+            "corresponde la cifra. "
+            "Para preguntas sobre dónde ahorrar o recortar gasto, SIEMPRE consulta "
+            "primero gasto_por_categoria (y evolucion_temporal si es relevante) antes "
+            "de responder: la información ya existe en tus herramientas, nunca le "
+            "pidas al usuario que te cuente en qué gasta."
             f"{contexto}"
         )),
         HumanMessage(content=estado["pregunta"]),
@@ -136,6 +161,10 @@ def nodo_financiero(estado, cur):
     respuesta_final = llamar_con_reintentos(llm_con_tools.invoke, mensajes)
 
     datos_obtenidos = "\n".join(m.content for m in mensajes if isinstance(m, ToolMessage))
+
+    print(f"[FINANCIERO] pregunta: {estado['pregunta']}")
+    print(f"[FINANCIERO] herramientas llamadas: {[l['name'] for l in respuesta.tool_calls]}")
+    print(f"[FINANCIERO] datos_obtenidos: {datos_obtenidos[:800]}")
 
     return {
         **estado,

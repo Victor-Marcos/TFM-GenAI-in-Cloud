@@ -45,6 +45,14 @@ Respuesta que ha dado el especialista "{estado['especialista_elegido']}":
   cifras numéricas — no exijas números para este tipo de preguntas.
 - Falla también si falta un dato pedido explícitamente, o si el
   especialista elegido no era el adecuado para esta pregunta.
+- IMPORTANTE: si la respuesta menciona una cifra numérica concreta (un
+  importe en euros, un conteo), verifica que ese número, o los números de
+  los que se deriva (por ejemplo, un porcentaje calculado a partir de dos
+  cifras presentes en los datos), aparezcan de forma reconocible en "Datos
+  reales obtenidos". Cálculos simples derivados de esos datos (porcentajes,
+  posiciones en un ranking, comparaciones) SON válidos y no cuentan como
+  cifra inventada. Solo marca como INSUFICIENTE si el número no tiene
+  ninguna relación calculable con los datos mostrados.
 
 Responde ÚNICAMENTE con un JSON:
 {{"suficiente": true/false, "motivo": "explicacion breve solo si suficiente es false, si no cadena vacia"}}

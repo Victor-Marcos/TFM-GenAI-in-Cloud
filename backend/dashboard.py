@@ -299,13 +299,13 @@ def ultimo_ticket(cur, perfil_id):
         """SELECT t.fecha, t.total, c.nombre AS comercio
            FROM tickets t
            JOIN comercios c ON t.comercio_id = c.id
-           WHERE t.perfil_id = %s
+           WHERE t.perfil_id = %s AND t.fecha IS NOT NULL
            ORDER BY t.fecha DESC, t.id DESC
            LIMIT 1""",
         (perfil_id,)
     )
     fila = cur.fetchone()
     if not fila:
-        return {"mensaje": "No hay tickets registrados"}
+        return {"mensaje": "No hay tickets con fecha registrada"}
     fecha, total, comercio = fila
     return {"fecha": fecha.isoformat(), "total": float(total), "comercio": comercio}

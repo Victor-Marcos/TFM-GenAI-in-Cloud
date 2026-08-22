@@ -103,6 +103,7 @@ Responde ÚNICAMENTE con un JSON: {{"especialista": "uno_de_los_anteriores"}}
     if especialista not in DESCRIPCIONES_ESPECIALISTAS:
         especialista = "sql_libre"
 
+    print(f"[ORQUESTADOR] pregunta='{estado['pregunta']}' -> especialista='{especialista}'")
     return {
         **estado,
         "especialista_elegido": especialista,

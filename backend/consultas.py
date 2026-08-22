@@ -102,6 +102,8 @@ def ejecutar_sql_seguro(cur, consulta_sql, limite_filas=500):
     if "limit" not in consulta_limpia:
         consulta_sql = f"{consulta_sql.rstrip(';')} LIMIT {limite_filas}"
 
+    print(f"[SQL EJECUTADO] {consulta_sql}")
+
     cur.execute(consulta_sql)
     columnas = [desc[0] for desc in cur.description]
 
