@@ -39,9 +39,13 @@ from agents.extraction.config import get_gemini_client, get_db_connection
 
 app = FastAPI(title="TFM GenAI in Cloud - API de tickets")
 
+
+
+origenes_permitidos = os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=origenes_permitidos,
     allow_methods=["*"],
     allow_headers=["*"],
 )
