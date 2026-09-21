@@ -1,5 +1,6 @@
 from pgvector import Vector
 import os
+from agents.extraction.imagen import resolver_ruta_imagen
 
 def listar_tickets(cur, perfil_id, limite=50):
     cur.execute(
@@ -121,14 +122,14 @@ def ejecutar_sql_seguro(cur, consulta_sql, limite_filas=500):
 
 def eliminar_perfil(cur, perfil_id):
     cur.execute("SELECT imagen_path FROM tickets WHERE perfil_id = %s", (perfil_id,))
-    rutas_imagenes = [fila[0] for fila in cur.fetchall() if fila[0]]
+    rutas_imagenes = [resolver_ruta_imagen(fila[0]) for fila in cur.fetchall() if fila[0]]
 
     cur.execute("DELETE FROM tickets WHERE perfil_id = %s", (perfil_id,))
     cur.execute("DELETE FROM perfiles WHERE id = %s", (perfil_id,))
 
     for ruta in rutas_imagenes:
-        if os.path.exists(ruta):
-            os.remove(ruta)
+        if ruta.exists():
+            ruta.unlink()
 
     return cur.rowcount > 0
 
@@ -202,10 +203,10 @@ def eliminar_ticket(cur, ticket_id, perfil_id):
     if not fila:
         return False
 
-    ruta_imagen = fila[0]
+    ruta_imagen = resolver_ruta_imagen(fila[0])
     cur.execute("DELETE FROM tickets WHERE id = %s AND perfil_id = %s", (ticket_id, perfil_id))
 
-    if ruta_imagen and os.path.exists(ruta_imagen):
-        os.remove(ruta_imagen)
+    if ruta_imagen and ruta_imagen.exists():
+        ruta_imagen.unlink()
 
     return cur.rowcount > 0

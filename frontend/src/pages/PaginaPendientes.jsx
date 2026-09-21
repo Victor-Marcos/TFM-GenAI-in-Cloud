@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 
-const API_URL = 'http://localhost:8000'
+import { API_URL } from '../config'
 
 function PaginaPendientes({ perfil, onVolver }) {
   const [pendientes, setPendientes] = useState([])
@@ -90,7 +90,7 @@ function PaginaPendientes({ perfil, onVolver }) {
          )}
 
         <img
-          src={`http://localhost:8000/tickets/${ticketEnEdicion.id}/imagen?perfil_id=${perfil.id}`}
+          src={`${API_URL}/tickets/${ticketEnEdicion.id}/imagen?perfil_id=${perfil.id}`}
           alt="Ticket original"
           onClick={() => { setRotacion(0); setImagenAmpliada(true) }}
           style={{ maxWidth: '300px', borderRadius: 'var(--radius)', boxShadow: 'var(--shadow-card)', marginBottom: '20px', cursor: 'zoom-in' }}
@@ -106,7 +106,7 @@ function PaginaPendientes({ perfil, onVolver }) {
           }}
         >
           <img
-            src={`http://localhost:8000/tickets/${ticketEnEdicion.id}/imagen?perfil_id=${perfil.id}`}
+            src={`${API_URL}/tickets/${ticketEnEdicion.id}/imagen?perfil_id=${perfil.id}`}
             alt="Ticket ampliado"
             style={{
               maxWidth: '85%', maxHeight: '75vh',

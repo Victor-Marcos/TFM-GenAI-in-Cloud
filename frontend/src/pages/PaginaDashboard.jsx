@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 
-const API_URL = 'http://localhost:8000'
+import { API_URL } from '../config'
 
 function TarjetaKPI({ etiqueta, valor }) {
   return (

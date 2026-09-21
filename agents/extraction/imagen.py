@@ -29,4 +29,18 @@ def guardar_imagen_permanente(imagen_bytes):
     with open(ruta_destino, "wb") as f:
         f.write(imagen_bytes)
 
-    return str(ruta_destino)
+    # Se guarda solo el nombre del fichero, no la ruta absoluta:
+    # así los datos no quedan atados a una máquina concreta.
+    return nombre_fichero
+
+
+def resolver_ruta_imagen(imagen_path):
+    """
+    Convierte lo guardado en la base de datos en una ruta válida en el
+    entorno actual. Acepta tanto el formato nuevo (solo el nombre) como
+    el antiguo (ruta absoluta de otra máquina), quedándose con el nombre
+    del fichero y buscándolo en el directorio de este entorno.
+    """
+    if not imagen_path:
+        return None
+    return DIRECTORIO_ALMACENAMIENTO / Path(imagen_path).name

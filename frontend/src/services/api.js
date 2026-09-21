@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:8000'
+import { API_URL } from '../config'
 
 export async function obtenerPerfiles() {
   const respuesta = await fetch(`${API_URL}/perfiles`)

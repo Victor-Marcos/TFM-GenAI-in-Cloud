@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 
-const API_URL = 'http://localhost:8000'
+import { API_URL } from '../config'
 
 function PaginaChat({ perfil, onVolver }) {
   const [mensajes, setMensajes] = useState([])
@@ -44,11 +44,29 @@ function PaginaChat({ perfil, onVolver }) {
   }
 
   return (
-    <div className="contenedor-app" style={{ display: 'flex', flexDirection: 'column', height: '85vh' }}>
+    <div className="contenedor-ancho" style={{ display: 'flex', flexDirection: 'column', height: '90vh' }}>
       <button onClick={onVolver} style={{ marginBottom: '20px', alignSelf: 'flex-start' }}>← Volver al menú</button>
-      <h1 style={{ marginBottom: '16px' }}>Pregúntale a tus datos</h1>
 
-      <div style={{ flex: 1, overflowY: 'auto', marginBottom: '16px' }}>
+            <div style={{ marginBottom: '20px' }}>
+        <h1 style={{ margin: 0, fontSize: '32px' }}>Sistema de Agentes IA</h1>
+        <span
+          className="mono"
+          style={{
+            fontSize: '12px',
+            letterSpacing: '0.08em',
+            color: 'var(--validated)',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            marginTop: '8px'
+          }}
+        >
+          <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: 'var(--validated)', display: 'inline-block' }} />
+          LANGGRAPH · 4 AGENTES DE IA
+        </span>
+      </div>
+
+      <div style={{ flex: 1, overflowY: 'auto', marginBottom: '16px', padding: '4px' }}>
         {mensajes.length === 0 && (
           <p style={{ color: 'var(--ink-soft)', fontSize: '14px' }}>
             Prueba a preguntar cosas como "¿en qué gasto más?", "¿qué compro con más frecuencia?" o "¿qué tan fiable es el sistema?".
@@ -60,12 +78,13 @@ function PaginaChat({ perfil, onVolver }) {
             key={i}
             className="tarjeta-recibo"
             style={{
-              maxWidth: '75%',
+              maxWidth: '65%',
               marginLeft: m.autor === 'usuario' ? 'auto' : '0',
               background: m.autor === 'usuario' ? 'var(--ink)' : 'var(--paper-raised)',
               color: m.autor === 'usuario' ? 'var(--paper)' : 'var(--ink)',
               whiteSpace: 'pre-wrap',
-              fontSize: '14px'
+              fontSize: '15px',
+              lineHeight: 1.5
             }}
           >
             {m.texto}
@@ -73,7 +92,7 @@ function PaginaChat({ perfil, onVolver }) {
         ))}
 
         {enviando && (
-          <div className="tarjeta-recibo" style={{ maxWidth: '75%', fontSize: '14px', color: 'var(--ink-soft)' }}>
+          <div className="tarjeta-recibo" style={{ maxWidth: '65%', fontSize: '14px', color: 'var(--ink-soft)' }}>
             Pensando...
           </div>
         )}
@@ -88,7 +107,7 @@ function PaginaChat({ perfil, onVolver }) {
           onKeyDown={manejarTecla}
           placeholder="Escribe tu pregunta..."
           rows={2}
-          style={{ flex: 1, resize: 'none' }}
+          style={{ flex: 1, resize: 'none', fontSize: '15px' }}
         />
         <button
           onClick={enviarPregunta}

@@ -1,6 +1,7 @@
 import sys
 import os
 from io import BytesIO
+from agents.extraction.imagen import resolver_ruta_imagen
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
@@ -169,8 +170,8 @@ def get_imagen_ticket(ticket_id: int, perfil_id: int):
     if ticket is None:
         raise HTTPException(status_code=404, detail="Ticket no encontrado")
 
-    ruta_imagen = ticket.get("imagen_path")
-    if not ruta_imagen or not os.path.exists(ruta_imagen):
+    ruta_imagen = resolver_ruta_imagen(ticket.get("imagen_path"))
+    if ruta_imagen is None or not ruta_imagen.exists():
         raise HTTPException(status_code=404, detail="Imagen no encontrada")
 
     return FileResponse(ruta_imagen)

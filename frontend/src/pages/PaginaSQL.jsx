@@ -3,7 +3,7 @@ import * as XLSX from 'xlsx'
 import mermaid from 'mermaid'
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 
-const API_URL = 'http://localhost:8000'
+import { API_URL } from '../config'
 
 const CONSULTAS_PREDEFINIDAS = {
   'Gasto por categoría': `SELECT cp.nombre AS categoria, SUM(lt.subtotal) AS total
